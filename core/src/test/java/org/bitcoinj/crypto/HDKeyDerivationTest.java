@@ -16,19 +16,18 @@
 
 package org.bitcoinj.crypto;
 
+import java.math.BigInteger;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-import java.math.BigInteger;
-
+import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Utils;
 import org.bitcoinj.crypto.HDKeyDerivation.PublicDeriveMode;
+import org.bitcoinj.params.TestNet3Params;
 import org.bouncycastle.crypto.params.KeyParameter;
 import org.junit.Test;
-
-import com.google.common.collect.ImmutableList;
 
 /**
  * @author Andreas Schildbach
@@ -100,7 +99,30 @@ public class HDKeyDerivationTest {
         assertTrue(fromPublicWithInversion.isPubKeyOnly());
         assertFalse(fromPublicWithInversion.isEncrypted());
     }
+    @Test (expected = java.lang.IllegalArgumentException.class)
+    public void testDoesNotDeriveTooManyLevelsPrivate() {
+        NetworkParameters params = TestNet3Params.get();
+        String xprv = "tprv8ZgxMBicQKsPdAoL5dkkJ2rLrYcYssH1UXBtY7N6zJQA99CuwR3t817dmKHNP3RqRsLVE2p1HAyTdXK1xjLBj9vr3xsN2p8sMoRUu4yBQzP";
+        DeterministicKey child = DeterministicKey.deserializeB58(xprv, params);
+        for (int i = 0; i < 255; i++) {
+            child = HDKeyDerivation.deriveChildKey(child, new ChildNumber(i, true));
+        }
+        assertEquals(255, child.getDepth());
 
+        HDKeyDerivation.deriveChildKey(child, new ChildNumber(0, true));
+    }
+    @Test (expected = java.lang.IllegalArgumentException.class)
+    public void testDoesNotDeriveTooManyLevelsPublic() {
+        NetworkParameters params = TestNet3Params.get();
+        String xprv = "tpubD6NzVbkrYhZ4Wdq7yHRLhSWTRa8V3CTv3pnfpdQQQaCYydTgZosUJVjVwRpJqzyFWgSW3KuviHY1MpJkKAPhMZbWF145c7Zt1CrjJ83LdGv";
+        DeterministicKey child = DeterministicKey.deserializeB58(xprv, params);
+        for (int i = 0; i < 255; i++) {
+            child = HDKeyDerivation.deriveChildKey(child, new ChildNumber(i, true));
+        }
+        assertEquals(255, child.getDepth());
+
+        HDKeyDerivation.deriveChildKey(child, new ChildNumber(0, true));
+    }
     @Test
     public void testDeriveFromEncryptedParent() {
         DeterministicKey parent = new DeterministicKey(HDPath.M(), new byte[32], BigInteger.TEN,
